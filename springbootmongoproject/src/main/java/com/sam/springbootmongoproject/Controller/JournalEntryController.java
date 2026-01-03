@@ -1,41 +1,61 @@
 package com.sam.springbootmongoproject.Controller;
 
 import com.sam.springbootmongoproject.Entity.JournalEntry;
+import com.sam.springbootmongoproject.Service.JournalEntryService;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("/journals")
+@RequestMapping("/journal")
 public class JournalEntryController {
 
     @Autowired
-    JournalEntry journalEntry;
+    public JournalEntry journalEntry;
 
-    public HashMap<Long, JournalEntry> journals = new HashMap<>();
+    @Autowired
+    public JournalEntryService journalEntryService;
 
-    @GetMapping("entries")
+    @GetMapping
     public List<JournalEntry> getJournals(){
-        return new ArrayList<>(journals.values());
+        return journalEntryService.listEntry();
     }
 
-    @PostMapping("entries")
-    public String createJournals(@RequestBody JournalEntry journalEntry){
-        journals.put(journalEntry.getId(), journalEntry);
-        return "Record inserted to DB";
+    @GetMapping("{id}")
+    public JournalEntry getJournalById(@PathVariable ObjectId id){
+        return journalEntryService.getJournalEntry(id).orElse(null);
     }
 
-    @PutMapping("{myid}")
-    public JournalEntry updateJournal(@PathVariable Long myid, @RequestBody JournalEntry journalEntry){
-        return journals.put(myid, journalEntry);
+    @PostMapping
+    public JournalEntry createJournal(@RequestBody JournalEntry journalEntry){
+        journalEntry.setDate(LocalDateTime.now());
+        journalEntryService.saveEntry(journalEntry);
+        return journalEntry;
     }
 
-    @DeleteMapping("{myid}")
-    public String deleteJournal(@PathVariable Long myid){
-        journals.remove(myid, journalEntry);
-        return "Record deleted from DB";
+    @DeleteMapping("{id}")
+    public void deleteJournalEntry(@PathVariable ObjectId id){
+        journalEntryService.deleteEntry(id);
     }
+
+    @PutMapping("{id}")
+    public JournalEntry updateJournal(@PathVariable ObjectId id, @RequestBody JournalEntry newentry){
+        JournalEntry oldentry = journalEntryService.getJournalEntry(id).orElse(null);
+        if(oldentry != null){
+            oldentry.setTitle(newentry.getTitle() != null && !newentry.getTitle().equals("")
+                    ? newentry.getTitle()
+                    : oldentry.getTitle());
+
+            oldentry.setContent(newentry.getContent() != null && !newentry.getContent().equals("")
+                    ? newentry.getContent()
+                    : oldentry.getContent());
+        }
+        journalEntryService.saveEntry(oldentry);
+        return oldentry;
+    }
+
 }
